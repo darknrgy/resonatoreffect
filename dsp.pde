@@ -60,46 +60,34 @@ abstract class DSP {
 class DSPs extends ArrayList<DSP> {}
 
 // UGen to DSP adapter
-class UGenDSP extends DSP {
-	private UGen ugen;
-	public UGenDSP (UGen ugen) {
+class UGenDSP {
+	protected UGen ugen;
+	protected long counter;
+	protected ArrayList<ChannelDSP> dsps;
+	float[] output;
+
+	public UGenDSP (UGen ugen, AudioOutput audioOuptut) {
 		this.ugen = ugen;
 
 		// hack to auto configure the UGen
-		out = minim.getLineOut(Minim.MONO, bufferSize);
-		this.ugen.patch(out);
-		this.ugen.unpatch(out);
+		this.ugen.patch(audioOuptut);
+		this.ugen.unpatch(audioOuptut);
+
+		dsps = new  ArrayList<ChannelDSP>();
+		for (int i = 0; i < ugen.channelCount(); i++) {
+			dsps.add(new ChannelDSP(this, i));
+		}
+
+		output = new float[ugen.channelCount()];
 	}
 
-	public UGen getUGen() {
-		return ugen;
-	}
-
-	protected float generate() {
-		float []channels = new float[1];
-		this.ugen.tick(channels);
-		return channels[0];
-	}
-}
-
-// Stereo UGen to DSP adapter
-class StereoUGenDSP {
-	private UGen ugen;
-	private long counter;
-	private float[] output = new float[2];
-
-	public StereoUGenDSP (UGen ugen) {
-		this.ugen = ugen;
-
-		// hack to auto configure the UGen
-		out = minim.getLineOut(Minim.STEREO, bufferSize);
-		this.ugen.patch(out);
-		this.ugen.unpatch(out);
+	public DSP getChannel(int channel) {
+		return dsps.get(channel);
 	}
 
 	protected float generate(long counter, int channel) {
 		if (counter == this.counter) return output[channel];
-		this.counter = counter;
+		this.counter = counter;		
 		this.ugen.tick(output);
 		return output[channel];
 	}
@@ -107,47 +95,47 @@ class StereoUGenDSP {
 
 class ChannelDSP extends DSP {
 	private int channel;
-	private StereoUGenDSP mcDSP;
+	private UGenDSP uGenDSP;
 
-	public ChannelDSP(StereoUGenDSP mcDSP, int channel) {
+	public ChannelDSP(UGenDSP uGenDSP, int channel) {
 		this.channel = channel;
-		this.mcDSP = mcDSP;
+		this.uGenDSP = uGenDSP;
 	}
-
+	
 	protected float generate() {
-		return mcDSP.generate(counter, channel);
+		return uGenDSP.generate(counter, channel);
 	}
 }
-
-// DSP to UGen adapter
+// DSP  to uGen adapter
 class DSPUGen extends UGen {
-	private DSP dsp;
-	private long counter = 0;
+	protected DSPs dsps;
+	protected int counter;
 
 	public DSPUGen(DSP dsp) {
-		this.dsp = dsp;
+		this.dsps = new DSPs();
+		this.dsps.add(dsp);
+	}
+
+	public DSPUGen(DSP dspL, DSP dspR) {
+		this.dsps = new DSPs();
+		this.dsps.add(dspL);
+		this.dsps.add(dspR);
+	}
+
+	public DSPUGen(DSPs dsps) {
+		this.dsps = dsps;
 	}
 
 	protected void uGenerate(float[] channels) {
-		channels[0] = dsp.cascade(counter);
-		counter ++; 
-	}
-}
+		
+		if (channels.length != dsps.size()) {
+			error("Channel mismatch in DSPUGen");
+		}
 
-// Stereo DSP to UGen adapter
-class StereoDSPUGen extends UGen {
-	private DSP dspL;
-	private DSP dspR;
-	private long counter = 0;
+		for (int i = 0; i < channels.length; i++) {
+			channels[i] = dsps.get(i).cascade(counter);
+		}
 
-	public StereoDSPUGen(DSP dspL, DSP dspR) {
-		this.dspL = dspL;
-		this.dspR = dspR;
-	}
-
-	protected void uGenerate(float[] channels) {
-		channels[0] = dspL.cascade(counter);
-		channels[1] = dspR.cascade(counter);
 		counter ++; 
 	}
 }
@@ -255,4 +243,9 @@ class GainDSP extends DSP {
 		if (y < -1) y = -1;
 		return y;
 	}
+}
+
+void error(String message) {
+	print ("Error: " + message + "\n");
+	exit();
 }

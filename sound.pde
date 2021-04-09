@@ -10,7 +10,7 @@ final float tau = 2 * 3.14159;
 float dt = 0.000022727272;
 
 
-AudioOutput out;
+AudioOutput audioOutput;
 Minim minim;
 
 void setup() {
@@ -18,23 +18,20 @@ void setup() {
 	size(800, 600, P2D);
 
 	minim = new Minim(this);
-	out = minim.getLineOut(Minim.STEREO, 256);
+	audioOutput = minim.getLineOut(Minim.STEREO, 256);
 
 	FilePlayer fileplayer = new FilePlayer( minim.loadFileStream("music.wav"));
-	StereoUGenDSP fileplayerDSP = new StereoUGenDSP(fileplayer);
+	UGenDSP fileplayerDSP = new UGenDSP(fileplayer, audioOutput);
 	fileplayer.loop();
-
-	ChannelDSP channelL = new ChannelDSP(fileplayerDSP, 0);
-	ChannelDSP channelR = new ChannelDSP(fileplayerDSP, 1);
 
 	ResonatorsDSP resonatorsL = new ResonatorsDSP();
 	ResonatorsDSP resonatorsR = new ResonatorsDSP();
 
-	resonatorsL.chain(channelL);
-	resonatorsR.chain(channelR);
+	resonatorsL.chain(fileplayerDSP.getChannel(0));
+	resonatorsR.chain(fileplayerDSP.getChannel(1));
 
-	StereoDSPUGen stereoOut = new StereoDSPUGen(resonatorsL, resonatorsR);
-	stereoOut.patch(out);
+	DSPUGen stereoOut = new DSPUGen(resonatorsL, resonatorsR);
+	stereoOut.patch(audioOutput);
 	
 }
 
@@ -47,13 +44,13 @@ void draw() {
 	// draw the waveforms
 	int trigger = 0;
 
-	for( int i = 0; i < out.bufferSize() - 1; i++ ) {
+	for( int i = 0; i < audioOutput.bufferSize() - 1; i++ ) {
 		// find the x position of each buffer value
-		float x1  =  map( i, 0, out.bufferSize(), 0, width );
-		float x2  =  map( i+1, 0, out.bufferSize(), 0, width );
+		float x1  =  map( i, 0, audioOutput.bufferSize(), 0, width );
+		float x2  =  map( i+1, 0, audioOutput.bufferSize(), 0, width );
 		// draw a line from one buffer position to the next for both channels
-		line( x1, 50 + out.left.get(i)*50, x2, 50 + out.left.get(i+1)*50);
-		line( x1, 150 + out.right.get(i)*50, x2, 150 + out.right.get(i+1)*50);
+		line( x1, 50 + audioOutput.left.get(i)*50, x2, 50 + audioOutput.left.get(i+1)*50);
+		line( x1, 150 + audioOutput.right.get(i)*50, x2, 150 + audioOutput.right.get(i+1)*50);
 	}	
 }
 
