@@ -59,11 +59,53 @@ abstract class DSP {
 
 class DSPs extends ArrayList<DSP> {}
 
+class MultiChannelDSP {
+	DSPs dsps;
+	
+	public MultiChannelDSP(DSP dsp) {
+		this.dsps = new DSPs();
+		this.dsps.add(dsp);
+	}
+
+	public MultiChannelDSP(DSPs dsps) {
+		this.dsps = dsps;
+	}
+
+	public MultiChannelDSP(DSP dspL, DSP dspR) {
+		this.dsps = new DSPs();
+		this.dsps.add(dspL);
+		this.dsps.add(dspR);
+	}
+
+	protected int channelCount() {
+		return dsps.size();
+	}
+
+	protected DSPs getDSPs() {
+		return dsps;
+	}
+
+	protected DSP getDSP(int channel) {
+		return dsps.get(channel);
+	}
+
+	public void chain(MultiChannelDSP input) {
+		if (input.channelCount() != dsps.size()) {
+			error("Channel count mismatch in MultiChannelDSP");
+		}
+
+		for (int i = 0; i < dsps.size(); i++) {
+			dsps.get(i).chain(input.getDSPs().get(i));
+		}
+	}
+}
+
 // UGen to DSP adapter
 class UGenDSP {
 	protected UGen ugen;
 	protected long counter;
-	protected ArrayList<ChannelDSP> dsps;
+	protected MultiChannelDSP dsps;
+	
 	float[] output;
 
 	public UGenDSP (UGen ugen, AudioOutput audioOuptut) {
@@ -73,16 +115,17 @@ class UGenDSP {
 		this.ugen.patch(audioOuptut);
 		this.ugen.unpatch(audioOuptut);
 
-		dsps = new  ArrayList<ChannelDSP>();
+		DSPs dsps = new DSPs();
 		for (int i = 0; i < ugen.channelCount(); i++) {
 			dsps.add(new ChannelDSP(this, i));
 		}
 
+		this.dsps = new MultiChannelDSP(dsps);
 		output = new float[ugen.channelCount()];
 	}
 
-	public DSP getChannel(int channel) {
-		return dsps.get(channel);
+	public MultiChannelDSP getMultiChannelDSP() {
+		return dsps;
 	}
 
 	protected float generate(long counter, int channel) {
@@ -108,32 +151,33 @@ class ChannelDSP extends DSP {
 }
 // DSP  to uGen adapter
 class DSPUGen extends UGen {
-	protected DSPs dsps;
+	protected MultiChannelDSP dsps;
 	protected int counter;
 
 	public DSPUGen(DSP dsp) {
-		this.dsps = new DSPs();
-		this.dsps.add(dsp);
+		this.dsps = new MultiChannelDSP(dsp);		
 	}
 
 	public DSPUGen(DSP dspL, DSP dspR) {
-		this.dsps = new DSPs();
-		this.dsps.add(dspL);
-		this.dsps.add(dspR);
+		this.dsps = new MultiChannelDSP(dspL, dspR);
 	}
 
 	public DSPUGen(DSPs dsps) {
-		this.dsps = dsps;
+		this.dsps = new MultiChannelDSP(dsps);
+	}
+
+	public DSPUGen(MultiChannelDSP mcdsp) {
+		this.dsps = mcdsp;
 	}
 
 	protected void uGenerate(float[] channels) {
 		
-		if (channels.length != dsps.size()) {
+		if (channels.length != dsps.channelCount()) {
 			error("Channel mismatch in DSPUGen");
 		}
 
 		for (int i = 0; i < channels.length; i++) {
-			channels[i] = dsps.get(i).cascade(counter);
+			channels[i] = dsps.getDSP(i).cascade(counter);
 		}
 
 		counter ++; 
