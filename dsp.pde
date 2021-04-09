@@ -1,3 +1,5 @@
+// Similar to Processing's UGen, but allows many to one and one to many relationships
+
 import java.util.ArrayList;
 
 final int bufferSize = 256;
@@ -52,6 +54,7 @@ abstract class DSP {
 
 class DSPs extends ArrayList<DSP> {}
 
+// UGen to DSP adapter
 class UGenDSP extends DSP {
 	private UGen ugen;
 	public UGenDSP (UGen ugen) {
@@ -74,6 +77,7 @@ class UGenDSP extends DSP {
 	}
 }
 
+// DSP to UGen adapter
 class DSPUGen extends UGen {
 	private DSP dsp;
 	private long counter = 0;
@@ -119,6 +123,7 @@ class ResonatorDSP extends DSP {
 	}
 }
 
+// Many to one mixer
 class MixerDSP extends DSP {
 	private float sum;
 
@@ -132,6 +137,7 @@ class MixerDSP extends DSP {
 	}
 }
 
+// Gain
 class GainDSP extends DSP {
 	protected float gain = 1.0f;
 
