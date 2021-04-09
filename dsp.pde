@@ -35,7 +35,7 @@ abstract class DSP {
 	}
 
 	public float getInput() {
-    DSP test = getInputs().get(0);
+	DSP test = getInputs().get(0);
 		return test.cascade(counter);
 	}
 
