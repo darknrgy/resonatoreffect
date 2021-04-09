@@ -61,6 +61,8 @@ class DSPs extends ArrayList<DSP> {}
 
 class MultiChannelDSP {
 	DSPs dsps;
+
+	public MultiChannelDSP() {}
 	
 	public MultiChannelDSP(DSP dsp) {
 		this.dsps = new DSPs();
@@ -69,12 +71,6 @@ class MultiChannelDSP {
 
 	public MultiChannelDSP(DSPs dsps) {
 		this.dsps = dsps;
-	}
-
-	public MultiChannelDSP(DSP dspL, DSP dspR) {
-		this.dsps = new DSPs();
-		this.dsps.add(dspL);
-		this.dsps.add(dspR);
 	}
 
 	protected int channelCount() {
@@ -97,6 +93,15 @@ class MultiChannelDSP {
 		for (int i = 0; i < dsps.size(); i++) {
 			dsps.get(i).chain(input.getDSPs().get(i));
 		}
+	}
+}
+
+class StereoDSP extends MultiChannelDSP {
+	public StereoDSP(DSP dspL, DSP dspR) {
+		super();
+		dsps = new DSPs();
+		dsps.add(dspL);
+		dsps.add(dspR);
 	}
 }
 
@@ -159,7 +164,7 @@ class DSPUGen extends UGen {
 	}
 
 	public DSPUGen(DSP dspL, DSP dspR) {
-		this.dsps = new MultiChannelDSP(dspL, dspR);
+		this.dsps = new StereoDSP(dspL, dspR);
 	}
 
 	public DSPUGen(DSPs dsps) {

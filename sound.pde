@@ -24,7 +24,7 @@ void setup() {
 	UGenDSP fileplayerDSP = new UGenDSP(fileplayer, audioOutput);
 	fileplayer.loop();
 
-	MultiChannelDSP resonators = new MultiChannelDSP(new ResonatorsDSP(), new ResonatorsDSP());
+	StereoDSP resonators = new StereoDSP(new ResonatorsDSP(), new ResonatorsDSP());
 	resonators.chain(fileplayerDSP.getMultiChannelDSP());
 
 	DSPUGen stereoOut = new DSPUGen(resonators);
