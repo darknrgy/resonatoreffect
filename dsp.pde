@@ -218,9 +218,7 @@ class ResonatorDSP extends DSP {
 		y = y + getInput() * mixAmount;
 		v += a * dt * -y;
 		y += v * dt;
-		y *= 0.99995;
-		if (y > 1) y = 1;
-		if (y < -1) y = -1;
+		y *= 0.9999;
 		return y;
 	}
 }
@@ -235,13 +233,13 @@ class ResonatorsDSP extends DSP {
 		float[] notes = getNoteChart();
 		resonators = new DSPs();
 		outputMixer = new MixerDSP();
-		gain = new GainDSP(0.01f);
+		gain = new GainDSP(0.04f);
 		gain.chain(outputMixer);
 		for (float resonatorFreq: notes) {
 			for (int strings = 0; strings < 5; strings++) {
 				ResonatorDSP resonator = new ResonatorDSP(resonatorFreq * random(0.995, 1.005));
 				//ResonatorDSP resonator = new ResonatorDSP(resonatorFreq * random(0.9999, 1.0001));
-				resonator.setMixAmount(0.005);
+				resonator.setMixAmount(0.001);
 				outputMixer.chain(resonator);
 				resonators.add(resonator);
 			}
@@ -291,6 +289,20 @@ class GainDSP extends DSP {
 		if (y > 1) y = 1;
 		if (y < -1) y = -1;
 		return y;
+	}
+}
+
+class CompressorDSP extends DSP {
+	float compression;
+
+	public void setCompression(float compression) {
+		this.compression = map(compression, 0, 1, 2, 0);
+		print (this.compression + "\n");
+	}
+
+	protected float generate() {
+		float input = getInput();
+		return pow(abs(input), compression) * (input > 0 ? 1 : -1);
 	}
 }
 
